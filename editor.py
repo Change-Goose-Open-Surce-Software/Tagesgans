@@ -276,9 +276,8 @@ class DiaryEditor(QMainWindow):
         media_btn.clicked.connect(self.insert_media)
         toolbar.addWidget(media_btn)
     
-    def insert_format(self):
-        """Fügt Format-Tag ein"""
-        # Dialog für Format-Einstellungen
+   def insert_format(self):
+        """Öffnet den Farbdialog und fügt das Format-Tag ein"""
         dialog = QDialog(self)
         dialog.setWindowTitle("Format einfügen")
         layout = QFormLayout()
@@ -289,29 +288,34 @@ class DiaryEditor(QMainWindow):
         size_spin.setValue(20)
         layout.addRow("Größe:", size_spin)
         
-        # FKUD Checkboxen
-        bold_check = QDialog()
-        bold_widget = QWidget()
-        bold_layout = QHBoxLayout()
-        
-        from PyQt5.QtWidgets import QCheckBox
+        style_layout = QVBoxLayout()
+        from PyQt5.QtWidgets import QCheckBox, QPushButton, QColorDialog
         fett_check = QCheckBox("Fett (F)")
         kursiv_check = QCheckBox("Kursiv (K)")
         unterstrichen_check = QCheckBox("Unterstrichen (U)")
         durchgestrichen_check = QCheckBox("Durchgestrichen (D)")
         
-        style_layout = QVBoxLayout()
         style_layout.addWidget(fett_check)
         style_layout.addWidget(kursiv_check)
         style_layout.addWidget(unterstrichen_check)
         style_layout.addWidget(durchgestrichen_check)
         layout.addRow("Stil:", style_layout)
         
-        # Farbe
-        colors = ["Schwarz", "Rot", "Grün", "Blau", "Gelb", "Orange", "Lila", "Grau"]
-        color_combo = QComboBox()
-        color_combo.addItems(colors)
-        layout.addRow("Farbe:", color_combo)
+        # Farbauswahl via Button & Standard-Dialog
+        self.selected_color = "#000000" 
+        color_button = QPushButton("Farbe wählen...")
+        
+        def choose_color():
+            color = QColorDialog.getColor()
+            if color.isValid():
+                self.selected_color = color.name()
+                color_button.setText(f"Farbe: {self.selected_color}")
+                # Button zur Vorschau einfärben
+                lum = color.lightness()
+                color_button.setStyleSheet(f"background-color: {self.selected_color}; color: {'white' if lum < 128 else 'black'};")
+
+        color_button.clicked.connect(choose_color)
+        layout.addRow("Farbe:", color_button)
         
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.accepted.connect(dialog.accept)
@@ -323,15 +327,13 @@ class DiaryEditor(QMainWindow):
         dialog.setLayout(main_layout)
         
         if dialog.exec_() == QDialog.Accepted:
-            size = size_spin.value()
-            style = ""
-            style += "F" if fett_check.isChecked() else "f"
-            style += "K" if kursiv_check.isChecked() else "k"
-            style += "U" if unterstrichen_check.isChecked() else "u"
-            style += "D" if durchgestrichen_check.isChecked() else "d"
-            color = color_combo.currentText()
-            
-            format_tag = f"{{{size}|{style}|{color}}}"
+            style = "".join([
+                "F" if fett_check.isChecked() else "f",
+                "K" if kursiv_check.isChecked() else "k",
+                "U" if unterstrichen_check.isChecked() else "u",
+                "D" if durchgestrichen_check.isChecked() else "d"
+            ])
+            format_tag = f"{{{size_spin.value()}|{style}|{self.selected_color}}}"
             self.text_edit.insertPlainText(format_tag)
     
     def insert_person(self):
