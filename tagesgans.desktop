@@ -11,5 +11,4 @@ Exec=~/.local/bin/tagesgans/tagesgans.py
 Icon=~/.local/share/icons/Goose/tagesgans.png
 Terminal=false
 Categories=Utility;Application;Editor;
-Type=Application
 Keywords=Tagebuch;Diary;Python;Change;Goose;Duck;Editor;Day;Dayly;Tag;
