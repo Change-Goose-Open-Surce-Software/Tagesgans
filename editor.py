@@ -39,6 +39,13 @@ class DatePickerDialog(QDialog):
         
         self.calendar = QCalendarWidget()
         self.calendar.setSelectedDate(QDate.currentDate())
+        
+        # Einfachere Navigation: Klick auf Jahr/Monat
+        from PyQt5.QtWidgets import QCalendarWidget
+        self.calendar.setNavigationBarVisible(True)
+        # Erlaube direktes Springen zu Jahr/Monat
+        self.calendar.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
+        
         layout.addWidget(self.calendar)
         
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -163,8 +170,11 @@ class DiaryEditor(QMainWindow):
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except:
+                    loaded = json.load(f)
+                    default_settings.update(loaded)
+                    return default_settings
+            except Exception as e:
+                print(f"Fehler beim Laden der Config: {e}")
                 return default_settings
         return default_settings
     
