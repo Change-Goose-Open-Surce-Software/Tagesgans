@@ -3,7 +3,7 @@
 """
 Tagesgans - Day Goose Diary System
 Main Program
-Version: 0.0.1
+Version: 0.0.2
 Released: 14.02.2026
 Author: Change Goose
 License: MIT
@@ -15,9 +15,11 @@ import json
 from pathlib import Path
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QPushButton, QLabel, QDialog, QComboBox, QFormLayout,
-                             QDialogButtonBox, QMessageBox, QTextBrowser)
+                             QDialogButtonBox, QMessageBox, QTextBrowser, QSpinBox,
+                             QHBoxLayout, QLineEdit)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon, QPixmap
+from PyQt5.QtGui import QIcon, QPixmap, QFont
+from PyQt5.QtWidgets import QCheckBox
 
 class SettingsDialog(QDialog):
     """Einstellungsdialog für Tagesgans"""
@@ -29,7 +31,7 @@ class SettingsDialog(QDialog):
         
     def init_ui(self):
         self.setWindowTitle(self.tr("Einstellungen"))
-        self.setMinimumWidth(400)
+        self.setMinimumWidth(500)
         
         layout = QFormLayout()
         
@@ -40,12 +42,68 @@ class SettingsDialog(QDialog):
         self.language_combo.setCurrentText(current_lang)
         layout.addRow(self.tr("Sprache:"), self.language_combo)
         
-        # Standardformatierung
-        self.default_format = QComboBox()
-        self.default_format.addItems(["{20|fkud|Schwarz}", "{18|fkud|Schwarz}", "{16|fkud|Schwarz}"])
+        # Standardformatierung - ERWEITERT
+        format_layout = QVBoxLayout()
+        
+        # Schriftgröße
+        size_layout = QHBoxLayout()
+        size_layout.addWidget(QLabel("Größe:"))
+        self.size_spin = QSpinBox()
+        self.size_spin.setMinimum(8)
+        self.size_spin.setMaximum(72)
+        
+        # Parse current format
         current_format = self.settings.get("default_format", "{20|fkud|Schwarz}")
-        self.default_format.setCurrentText(current_format)
-        layout.addRow(self.tr("Standardformatierung:"), self.default_format)
+        try:
+            import re
+            match = re.match(r'\{(\d+)\|([FfKkUuDd]{4})\|([^}]+)\}', current_format)
+            if match:
+                self.size_spin.setValue(int(match.group(1)))
+                style = match.group(2)
+                color = match.group(3)
+            else:
+                self.size_spin.setValue(20)
+                style = "fkud"
+                color = "Schwarz"
+        except:
+            self.size_spin.setValue(20)
+            style = "fkud"
+            color = "Schwarz"
+        
+        size_layout.addWidget(self.size_spin)
+        size_layout.addStretch()
+        format_layout.addLayout(size_layout)
+        
+        # FKUD Checkboxen
+        fkud_layout = QHBoxLayout()
+        self.fett_check = QCheckBox("Fett (F)")
+        self.kursiv_check = QCheckBox("Kursiv (K)")
+        self.unterstrichen_check = QCheckBox("Unterstrichen (U)")
+        self.durchgestrichen_check = QCheckBox("Durchgestrichen (D)")
+        
+        self.fett_check.setChecked('F' in style)
+        self.kursiv_check.setChecked('K' in style)
+        self.unterstrichen_check.setChecked('U' in style)
+        self.durchgestrichen_check.setChecked('D' in style)
+        
+        fkud_layout.addWidget(self.fett_check)
+        fkud_layout.addWidget(self.kursiv_check)
+        fkud_layout.addWidget(self.unterstrichen_check)
+        fkud_layout.addWidget(self.durchgestrichen_check)
+        format_layout.addLayout(fkud_layout)
+        
+        # Farbe
+        color_layout = QHBoxLayout()
+        color_layout.addWidget(QLabel("Farbe:"))
+        self.color_combo = QComboBox()
+        colors = ["Schwarz", "Rot", "Grün", "Blau", "Gelb", "Orange", "Lila", "Grau", "Weiß"]
+        self.color_combo.addItems(colors)
+        self.color_combo.setCurrentText(color)
+        color_layout.addWidget(self.color_combo)
+        color_layout.addStretch()
+        format_layout.addLayout(color_layout)
+        
+        layout.addRow(self.tr("Standardformatierung:"), format_layout)
         
         # Bearbeitungsleiste Position (Editor)
         self.toolbar_pos = QComboBox()
@@ -54,19 +112,12 @@ class SettingsDialog(QDialog):
         self.toolbar_pos.setCurrentText(current_toolbar)
         layout.addRow(self.tr("Bearbeitungsleiste:"), self.toolbar_pos)
         
-        # Labelleiste Position (Reader)
-        self.label_sidebar = QComboBox()
-        self.label_sidebar.addItems(["Rechts", "Links"])
-        current_label = self.settings.get("label_sidebar", "Rechts")
-        self.label_sidebar.setCurrentText(current_label)
-        layout.addRow(self.tr("Labelleiste:"), self.label_sidebar)
-        
-        # Zeitleiste Position (Reader)
-        self.time_sidebar = QComboBox()
-        self.time_sidebar.addItems(["Rechts", "Links"])
-        current_time = self.settings.get("time_sidebar", "Links")
-        self.time_sidebar.setCurrentText(current_time)
-        layout.addRow(self.tr("Zeitleiste:"), self.time_sidebar)
+        # EINE Seitenleiste Position (Reader) - vereinfacht
+        self.sidebar_pos = QComboBox()
+        self.sidebar_pos.addItems(["Rechts", "Links"])
+        current_sidebar = self.settings.get("sidebar_position", "Rechts")
+        self.sidebar_pos.setCurrentText(current_sidebar)
+        layout.addRow(self.tr("Seitenleiste (Reader):"), self.sidebar_pos)
         
         # Buttons
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
@@ -81,12 +132,22 @@ class SettingsDialog(QDialog):
         
     def get_settings(self):
         """Gibt die aktuellen Einstellungen zurück"""
+        # Format zusammenbauen
+        size = self.size_spin.value()
+        style = ""
+        style += "F" if self.fett_check.isChecked() else "f"
+        style += "K" if self.kursiv_check.isChecked() else "k"
+        style += "U" if self.unterstrichen_check.isChecked() else "u"
+        style += "D" if self.durchgestrichen_check.isChecked() else "d"
+        color = self.color_combo.currentText()
+        
+        default_format = f"{{{size}|{style}|{color}}}"
+        
         return {
             "language": self.language_combo.currentText(),
-            "default_format": self.default_format.currentText(),
+            "default_format": default_format,
             "toolbar_position": self.toolbar_pos.currentText(),
-            "label_sidebar": self.label_sidebar.currentText(),
-            "time_sidebar": self.time_sidebar.currentText()
+            "sidebar_position": self.sidebar_pos.currentText()
         }
     
     def tr(self, text):
@@ -96,8 +157,7 @@ class SettingsDialog(QDialog):
             "Sprache:": "Language:" if self.settings.get("language") == "English" else "Sprache:",
             "Standardformatierung:": "Default Formatting:" if self.settings.get("language") == "English" else "Standardformatierung:",
             "Bearbeitungsleiste:": "Toolbar Position:" if self.settings.get("language") == "English" else "Bearbeitungsleiste:",
-            "Labelleiste:": "Label Sidebar:" if self.settings.get("language") == "English" else "Labelleiste:",
-            "Zeitleiste:": "Time Sidebar:" if self.settings.get("language") == "English" else "Zeitleiste:"
+            "Seitenleiste (Reader):": "Sidebar (Reader):" if self.settings.get("language") == "English" else "Seitenleiste (Reader):"
         }
         return translations.get(text, text)
 
@@ -210,7 +270,7 @@ class AboutDialog(QDialog):
         if self.language == "Deutsch":
             content = """
             <h2>Tagesgans - Day Goose Diary</h2>
-            <p><b>Version:</b> 0.0.1<br>
+            <p><b>Version:</b> 0.0.2<br>
             <b>Veröffentlicht:</b> 14.02.2026<br>
             <b>Autor:</b> Change Goose<br>
             <b>Lizenz:</b> MIT License</p>
@@ -235,7 +295,7 @@ class AboutDialog(QDialog):
         else:
             content = """
             <h2>Tagesgans - Day Goose Diary</h2>
-            <p><b>Version:</b> 0.0.1<br>
+            <p><b>Version:</b> 0.0.2<br>
             <b>Released:</b> 14.02.2026<br>
             <b>Author:</b> Change Goose<br>
             <b>License:</b> MIT License</p>
@@ -288,23 +348,33 @@ class TagesgansMain(QMainWindow):
             "language": "Deutsch",
             "default_format": "{20|fkud|Schwarz}",
             "toolbar_position": "Oben",
-            "label_sidebar": "Rechts",
-            "time_sidebar": "Links"
+            "sidebar_position": "Rechts"
         }
+        
+        # Config-Verzeichnis erstellen falls nicht vorhanden
+        self.config_file.parent.mkdir(parents=True, exist_ok=True)
         
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            except:
+                    loaded = json.load(f)
+                    # Merge mit defaults für fehlende Keys
+                    default_settings.update(loaded)
+                    return default_settings
+            except Exception as e:
+                print(f"Fehler beim Laden der Config: {e}")
                 return default_settings
         return default_settings
     
     def save_settings(self):
         """Speichert die Einstellungen"""
-        self.config_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.config_file, 'w', encoding='utf-8') as f:
-            json.dump(self.settings, f, indent=4, ensure_ascii=False)
+        try:
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(self.config_file, 'w', encoding='utf-8') as f:
+                json.dump(self.settings, f, indent=4, ensure_ascii=False)
+            print(f"Settings gespeichert in: {self.config_file}")
+        except Exception as e:
+            print(f"Fehler beim Speichern der Config: {e}")
     
     def first_run_setup(self):
         """Erstkonfiguration beim ersten Start"""
@@ -339,32 +409,23 @@ class TagesgansMain(QMainWindow):
         
         # Logo/Titel
         title_label = QLabel("Tagesgans")
-        title_label.setStyleSheet("font-size: 32px; font-weight: bold; color: #2c3e50;")
+        title_font = QFont()
+        title_font.setPointSize(24)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
         
         subtitle_label = QLabel("Day Goose Diary System" if self.settings["language"] == "English" else "Tagebuch-System")
-        subtitle_label.setStyleSheet("font-size: 16px; color: #7f8c8d;")
+        subtitle_font = QFont()
+        subtitle_font.setPointSize(12)
+        subtitle_label.setFont(subtitle_font)
         subtitle_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(subtitle_label)
         
         layout.addSpacing(20)
         
         # Hauptbuttons
-        button_style = """
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                border: none;
-                padding: 15px;
-                font-size: 14px;
-                border-radius: 5px;
-            }
-            QPushButton:hover {
-                background-color: #2980b9;
-            }
-        """
-        
         if self.settings["language"] == "Deutsch":
             read_btn = self.create_button("📖 Tagebuch lesen", self.read_diary)
             edit_btn = self.create_button("✏️ Tagebuch bearbeiten", self.edit_diary)
@@ -381,7 +442,6 @@ class TagesgansMain(QMainWindow):
             about_btn = self.create_button("ℹ️ About Tagesgans", self.show_about)
         
         for btn in [read_btn, edit_btn, create_btn, settings_btn, tutorial_btn, about_btn]:
-            btn.setStyleSheet(button_style)
             layout.addWidget(btn)
         
         layout.addStretch()
@@ -393,6 +453,9 @@ class TagesgansMain(QMainWindow):
         btn = QPushButton(text)
         btn.clicked.connect(callback)
         btn.setMinimumHeight(50)
+        btn_font = QFont()
+        btn_font.setPointSize(11)
+        btn.setFont(btn_font)
         return btn
     
     def read_diary(self):
