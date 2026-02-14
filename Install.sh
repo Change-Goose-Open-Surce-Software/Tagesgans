@@ -17,5 +17,5 @@ chmod +x ~/.local/bin/tagesgans.py
 chmod +x ~/.local/share/Applications/tagesgans.desktop
 
 sudo apt update
-sudo apt install python3 python3-pyqt5 python3-pyqt5.qtmultimedia python3-pyqt5.qtmultimediawidgets qgis gnome-contacts gnome-calendar xdg-utils gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav -y
+sudo apt install python3 python3-pyqt5 python3-pyqt5.qtmultimedia qgis gnome-contacts gnome-calendar xdg-utils gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-plugins-bad gstreamer1.0-plugins-ugly gstreamer1.0-libav -y
 sudo update-desktop-database
