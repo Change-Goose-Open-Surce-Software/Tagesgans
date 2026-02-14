@@ -11,9 +11,9 @@ wget -O ~/.local/share/icons/Goose/time.png https://raw.githubusercontent.com/Ch
 wget -O ~/.local/share/icons/Goose/label.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/Label.png
 wget -O ~/.local/share/Applications/tagesgans.desktop https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/Tagesgans.desktop
 
-chmod +x ~/.local/bin/reader.py
-chmod +x ~/.local/bin/editor.py
-chmod +x ~/.local/bin/tagesgans.py
+chmod +x ~/.local/bin/tagesgans/reader.py
+chmod +x ~/.local/bin/tagesgans/editor.py
+chmod +x ~/.local/bin/tagesgans/tagesgans.py
 chmod +x ~/.local/share/Applications/tagesgans.desktop
 
 sudo apt update
