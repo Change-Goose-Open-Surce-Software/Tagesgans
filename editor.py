@@ -38,7 +38,8 @@ class DatePickerDialog(QDialog):
         
         self.calendar = QCalendarWidget()
         self.calendar.setSelectedDate(QDate.currentDate())
-        # Die problematische Zeile 'setVerticalHeaderFormat' wurde entfernt, um Abstürze zu verhindern
+        # Wichtig: Diese Zeile bleibt weg, um den Absturz zu verhindern:
+        # self.calendar.setVerticalHeaderFormat(...) 
         self.calendar.setNavigationBarVisible(True)
         
         layout.addWidget(self.calendar)
