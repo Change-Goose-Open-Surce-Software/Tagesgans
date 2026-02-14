@@ -86,8 +86,12 @@ class EntryViewerWindow(QMainWindow):
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
         
+        # Hintergrundfarbe setzen
+        self.setStyleSheet("QMainWindow { background-color: #f5f5f5; }")
+        
         # Hauptlayout
         central_widget = QWidget()
+        central_widget.setStyleSheet("QWidget { background-color: #f5f5f5; }")
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout()
         
@@ -109,6 +113,7 @@ class EntryViewerWindow(QMainWindow):
         
         # Rechte Seitenleiste
         right_panel = QWidget()
+        right_panel.setStyleSheet("QWidget { background-color: #f5f5f5; }")
         right_layout = QVBoxLayout()
         right_layout.setContentsMargins(5, 5, 5, 5)
         
@@ -116,6 +121,7 @@ class EntryViewerWindow(QMainWindow):
         label_header = QHBoxLayout()
         label_icon_path = Path.home() / ".local" / "share" / "icons" / "Goose" / "label.png"
         label_toggle = QToolButton()
+        label_toggle.setStyleSheet("QToolButton { background-color: transparent; border: none; }")
         if label_icon_path.exists():
             label_toggle.setIcon(QIcon(str(label_icon_path)))
         label_toggle.setIconSize(QSize(24, 24))
@@ -124,7 +130,7 @@ class EntryViewerWindow(QMainWindow):
         label_toggle.toggled.connect(lambda checked: self.label_list.setVisible(checked))
         
         label_title = QLabel("Labels")
-        label_title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        label_title.setStyleSheet("font-weight: bold; font-size: 14px; background-color: transparent;")
         
         label_header.addWidget(label_toggle)
         label_header.addWidget(label_title)
@@ -153,6 +159,7 @@ class EntryViewerWindow(QMainWindow):
         time_header = QHBoxLayout()
         time_icon_path = Path.home() / ".local" / "share" / "icons" / "Goose" / "time.png"
         time_toggle = QToolButton()
+        time_toggle.setStyleSheet("QToolButton { background-color: transparent; border: none; }")
         if time_icon_path.exists():
             time_toggle.setIcon(QIcon(str(time_icon_path)))
         time_toggle.setIconSize(QSize(24, 24))
@@ -161,7 +168,7 @@ class EntryViewerWindow(QMainWindow):
         time_toggle.toggled.connect(lambda checked: self.time_list.setVisible(checked))
         
         time_title = QLabel("Zeitstempel")
-        time_title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        time_title.setStyleSheet("font-weight: bold; font-size: 14px; background-color: transparent;")
         
         time_header.addWidget(time_toggle)
         time_header.addWidget(time_title)
@@ -407,11 +414,21 @@ class EntryViewerWindow(QMainWindow):
     def on_label_clicked(self, item):
         """Springt zum Label im Text"""
         label = item.text().replace("#", "")
-        self.text_browser.find(f"#{label}")
+        # Cursor zurücksetzen
+        cursor = self.text_browser.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+        self.text_browser.setTextCursor(cursor)
+        # Suche nach Label (mit Emoji)
+        self.text_browser.find(label)
     
     def on_timestamp_clicked(self, item):
         """Springt zum Zeitstempel im Text"""
         timestamp = item.text()
+        # Cursor zurücksetzen
+        cursor = self.text_browser.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+        self.text_browser.setTextCursor(cursor)
+        # Suche nach Zeitstempel
         self.text_browser.find(timestamp)
 
 
@@ -455,8 +472,12 @@ class DiaryReader(QMainWindow):
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
         
+        # Hintergrundfarbe setzen
+        self.setStyleSheet("QMainWindow { background-color: #f0f0f0; }")
+        
         # Hauptlayout
         central_widget = QWidget()
+        central_widget.setStyleSheet("QWidget { background-color: #f0f0f0; }")
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(20, 20, 20, 20)
@@ -470,13 +491,14 @@ class DiaryReader(QMainWindow):
                 font-weight: bold;
                 color: #2c3e50;
                 padding: 10px;
+                background-color: transparent;
             }
         """)
         main_layout.addWidget(title)
         
         # Tagebuch-Auswahl
         diary_label = QLabel("Tagebuch auswählen:" if lang == "Deutsch" else "Select Diary:")
-        diary_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #34495e;")
+        diary_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #34495e; background-color: transparent;")
         main_layout.addWidget(diary_label)
         
         self.diary_list = QListWidget()
@@ -505,7 +527,7 @@ class DiaryReader(QMainWindow):
         
         # Eintrags-Navigation als Baum
         entry_label = QLabel("Einträge:" if lang == "Deutsch" else "Entries:")
-        entry_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #34495e;")
+        entry_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #34495e; background-color: transparent;")
         main_layout.addWidget(entry_label)
         
         self.entry_tree = QTreeWidget()
