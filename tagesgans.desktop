@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name[de]=Tagesgans
+Name[en]=DuckDay
+GenericName[en]=Diary
+GenericName[de]=Tagebuch
+Comment[en]=DuckDay_a_FOSS_Diary
+Comment[de]=Tagesgans_ist_ein_FOSS_Tagebuch
+Exec=~/.local/bin/tagesgans.py
+Icon=~/.local/share/icons/Goose/Tagesgans.png
+Terminal=false
+Categories=Utility;Application;Editor;
+Type=Application
+Keywords=Tagebuch;Diary;Python;Change;Goose;Duck;Editor;Day;Dayly;Tag;Täglich;
