@@ -274,7 +274,7 @@ class EntryViewerWindow(QMainWindow):
             self.time_list.addItem(ts)
     
     def insert_formatted_line(self, cursor, line, format_info, media_dir):
-        """Fügt eine formatierte Zeile ein"""
+        """Verarbeitet Formatierung und Symbole in einer Zeille"""
         size, style, color = format_info
         
         char_format = QTextCharFormat()
@@ -286,7 +286,18 @@ class EntryViewerWindow(QMainWindow):
         font.setStrikeOut('D' in style)
         char_format.setFont(font)
         
-        char_format.setForeground(QColor(color))
+        # Erkennt Hex-Codes (#ffffff) ODER alte deutsche Namen
+        if color.startswith('#'):
+            actual_color = color
+        else:
+            color_map = {
+                "Schwarz": "#000000", "Rot": "#ff0000", "Grün": "#008000",
+                "Blau": "#0000ff", "Gelb": "#d4a017", "Orange": "#ffa500",
+                "Lila": "#800080", "Grau": "#808080", "Weiß": "#ffffff"
+            }
+            actual_color = color_map.get(color, "#000000")
+            
+        char_format.setForeground(QColor(actual_color))
         
         pos = 0
         while pos < len(line):
