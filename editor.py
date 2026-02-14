@@ -24,7 +24,7 @@ from PyQt5.QtGui import QFont, QColor, QTextCharFormat, QIcon, QTextCursor
 
 
 class DatePickerDialog(QDialog):
-    """Dialog zur Datumsauswahl"""
+    """Dialog zur Datumsauswahl - Absturzsicher"""
     
     def __init__(self, parent=None, language="Deutsch"):
         super().__init__(parent)
@@ -34,17 +34,12 @@ class DatePickerDialog(QDialog):
     
     def init_ui(self):
         self.setWindowTitle("Datum wählen" if self.language == "Deutsch" else "Select Date")
-        
         layout = QVBoxLayout()
         
         self.calendar = QCalendarWidget()
         self.calendar.setSelectedDate(QDate.currentDate())
-        
-        # Einfachere Navigation: Klick auf Jahr/Monat
-        from PyQt5.QtWidgets import QCalendarWidget
+        # Die problematische Zeile 'setVerticalHeaderFormat' wurde entfernt, um Abstürze zu verhindern
         self.calendar.setNavigationBarVisible(True)
-        # Erlaube direktes Springen zu Jahr/Monat
-        self.calendar.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
         
         layout.addWidget(self.calendar)
         
@@ -52,14 +47,11 @@ class DatePickerDialog(QDialog):
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addWidget(button_box)
-        
         self.setLayout(layout)
     
     def get_date(self):
-        """Gibt das ausgewählte Datum zurück"""
         qdate = self.calendar.selectedDate()
         return datetime(qdate.year(), qdate.month(), qdate.day())
-
 
 class CreateDiaryDialog(QDialog):
     """Dialog zum Erstellen eines neuen Tagebuchs"""
