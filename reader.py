@@ -62,6 +62,7 @@ class EntryViewerWindow(QMainWindow):
         self.settings = settings
         self.labels = []
         self.timestamps = []
+        self.entry_dark_mode = False  # Unabhängig vom System
         
         self.init_ui()
         self.load_entry()
@@ -86,12 +87,8 @@ class EntryViewerWindow(QMainWindow):
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
         
-        # Hintergrundfarbe setzen
-        self.setStyleSheet("QMainWindow { background-color: #f5f5f5; }")
-        
         # Hauptlayout
         central_widget = QWidget()
-        central_widget.setStyleSheet("QWidget { background-color: #f5f5f5; }")
         self.setCentralWidget(central_widget)
         main_layout = QHBoxLayout()
         
@@ -99,29 +96,40 @@ class EntryViewerWindow(QMainWindow):
         self.text_browser = QTextBrowser()
         self.text_browser.setOpenLinks(False)
         self.text_browser.anchorClicked.connect(self.on_link_clicked)
-        self.text_browser.setStyleSheet("""
-            QTextBrowser {
-                background-color: #ffffff;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                padding: 15px;
-                font-size: 14px;
-            }
-        """)
         
         main_layout.addWidget(self.text_browser, 4)
         
         # Rechte Seitenleiste
         right_panel = QWidget()
-        right_panel.setStyleSheet("QWidget { background-color: #f5f5f5; }")
         right_layout = QVBoxLayout()
         right_layout.setContentsMargins(5, 5, 5, 5)
+        
+        # Dark/Light Mode Toggle
+        mode_layout = QHBoxLayout()
+        mode_label = QLabel("Eintrag Modus:")
+        mode_label_font = QFont()
+        mode_label_font.setBold(True)
+        mode_label.setFont(mode_label_font)
+        
+        self.mode_toggle = QPushButton("🌙 Dark")
+        self.mode_toggle.setCheckable(True)
+        self.mode_toggle.clicked.connect(self.toggle_entry_mode)
+        
+        mode_layout.addWidget(mode_label)
+        mode_layout.addWidget(self.mode_toggle)
+        mode_layout.addStretch()
+        right_layout.addLayout(mode_layout)
+        
+        # Trennlinie
+        line = QFrame()
+        line.setFrameShape(QFrame.HLine)
+        line.setFrameShadow(QFrame.Sunken)
+        right_layout.addWidget(line)
         
         # Labels
         label_header = QHBoxLayout()
         label_icon_path = Path.home() / ".local" / "share" / "icons" / "Goose" / "label.png"
         label_toggle = QToolButton()
-        label_toggle.setStyleSheet("QToolButton { background-color: transparent; border: none; }")
         if label_icon_path.exists():
             label_toggle.setIcon(QIcon(str(label_icon_path)))
         label_toggle.setIconSize(QSize(24, 24))
@@ -130,7 +138,9 @@ class EntryViewerWindow(QMainWindow):
         label_toggle.toggled.connect(lambda checked: self.label_list.setVisible(checked))
         
         label_title = QLabel("Labels")
-        label_title.setStyleSheet("font-weight: bold; font-size: 14px; background-color: transparent;")
+        label_title_font = QFont()
+        label_title_font.setBold(True)
+        label_title.setFont(label_title_font)
         
         label_header.addWidget(label_toggle)
         label_header.addWidget(label_title)
@@ -140,26 +150,12 @@ class EntryViewerWindow(QMainWindow):
         self.label_list = QListWidget()
         self.label_list.itemClicked.connect(self.on_label_clicked)
         self.label_list.setMaximumWidth(200)
-        self.label_list.setStyleSheet("""
-            QListWidget {
-                background-color: #fff3cd;
-                border: 1px solid #ffc107;
-                border-radius: 3px;
-            }
-            QListWidget::item {
-                padding: 5px;
-            }
-            QListWidget::item:hover {
-                background-color: #ffe69c;
-            }
-        """)
         right_layout.addWidget(self.label_list)
         
         # Zeitstempel
         time_header = QHBoxLayout()
         time_icon_path = Path.home() / ".local" / "share" / "icons" / "Goose" / "time.png"
         time_toggle = QToolButton()
-        time_toggle.setStyleSheet("QToolButton { background-color: transparent; border: none; }")
         if time_icon_path.exists():
             time_toggle.setIcon(QIcon(str(time_icon_path)))
         time_toggle.setIconSize(QSize(24, 24))
@@ -168,7 +164,9 @@ class EntryViewerWindow(QMainWindow):
         time_toggle.toggled.connect(lambda checked: self.time_list.setVisible(checked))
         
         time_title = QLabel("Zeitstempel")
-        time_title.setStyleSheet("font-weight: bold; font-size: 14px; background-color: transparent;")
+        time_title_font = QFont()
+        time_title_font.setBold(True)
+        time_title.setFont(time_title_font)
         
         time_header.addWidget(time_toggle)
         time_header.addWidget(time_title)
@@ -178,19 +176,6 @@ class EntryViewerWindow(QMainWindow):
         self.time_list = QListWidget()
         self.time_list.itemClicked.connect(self.on_timestamp_clicked)
         self.time_list.setMaximumWidth(200)
-        self.time_list.setStyleSheet("""
-            QListWidget {
-                background-color: #d1ecf1;
-                border: 1px solid #0dcaf0;
-                border-radius: 3px;
-            }
-            QListWidget::item {
-                padding: 5px;
-            }
-            QListWidget::item:hover {
-                background-color: #bee5eb;
-            }
-        """)
         right_layout.addWidget(self.time_list)
         
         right_layout.addStretch()
@@ -198,6 +183,47 @@ class EntryViewerWindow(QMainWindow):
         
         main_layout.addWidget(right_panel, 1)
         central_widget.setLayout(main_layout)
+        
+        # Initial: System-Theme
+        self.apply_entry_theme()
+    
+    def toggle_entry_mode(self):
+        """Wechselt zwischen Dark und Light Mode für den Eintrag"""
+        self.entry_dark_mode = self.mode_toggle.isChecked()
+        if self.entry_dark_mode:
+            self.mode_toggle.setText("☀️ Light")
+        else:
+            self.mode_toggle.setText("🌙 Dark")
+        self.apply_entry_theme()
+        # Eintrag neu laden mit neuen Farben
+        self.load_entry()
+    
+    def apply_entry_theme(self):
+        """Wendet Theme auf Text-Browser an"""
+        if self.entry_dark_mode:
+            # Dark Mode für Eintrag
+            self.text_browser.setStyleSheet("""
+                QTextBrowser {
+                    background-color: #1e1e1e;
+                    color: #e0e0e0;
+                    border: 1px solid #555;
+                    border-radius: 5px;
+                    padding: 15px;
+                    font-size: 14px;
+                }
+            """)
+        else:
+            # Light Mode für Eintrag
+            self.text_browser.setStyleSheet("""
+                QTextBrowser {
+                    background-color: #ffffff;
+                    color: #000000;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    padding: 15px;
+                    font-size: 14px;
+                }
+            """)
     
     def load_entry(self):
         """Lädt und zeigt einen Tagebucheintrag"""
@@ -449,14 +475,15 @@ class DiaryReader(QMainWindow):
         """Lädt Einstellungen"""
         default_settings = {
             "language": "Deutsch",
-            "label_sidebar": "Rechts",
-            "time_sidebar": "Links"
+            "sidebar_position": "Rechts"
         }
         
         if self.config_file.exists():
             try:
                 with open(self.config_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    loaded = json.load(f)
+                    default_settings.update(loaded)
+                    return default_settings
             except:
                 return default_settings
         return default_settings
@@ -472,12 +499,10 @@ class DiaryReader(QMainWindow):
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
         
-        # Hintergrundfarbe setzen
-        self.setStyleSheet("QMainWindow { background-color: #f0f0f0; }")
+        # KEIN festes Styling - System-Theme verwenden
         
         # Hauptlayout
         central_widget = QWidget()
-        central_widget.setStyleSheet("QWidget { background-color: #f0f0f0; }")
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(20, 20, 20, 20)
@@ -485,73 +510,31 @@ class DiaryReader(QMainWindow):
         
         # Titel
         title = QLabel("📖 Tagesgans Reader")
-        title.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                font-weight: bold;
-                color: #2c3e50;
-                padding: 10px;
-                background-color: transparent;
-            }
-        """)
+        title_font = QFont()
+        title_font.setPointSize(18)
+        title_font.setBold(True)
+        title.setFont(title_font)
         main_layout.addWidget(title)
         
         # Tagebuch-Auswahl
         diary_label = QLabel("Tagebuch auswählen:" if lang == "Deutsch" else "Select Diary:")
-        diary_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #34495e; background-color: transparent;")
+        label_font = QFont()
+        label_font.setBold(True)
+        diary_label.setFont(label_font)
         main_layout.addWidget(diary_label)
         
         self.diary_list = QListWidget()
         self.diary_list.itemClicked.connect(self.on_diary_selected)
-        self.diary_list.setStyleSheet("""
-            QListWidget {
-                background-color: #ffffff;
-                border: 2px solid #3498db;
-                border-radius: 8px;
-                padding: 10px;
-                font-size: 14px;
-            }
-            QListWidget::item {
-                padding: 10px;
-                border-bottom: 1px solid #ecf0f1;
-            }
-            QListWidget::item:hover {
-                background-color: #ebf5fb;
-            }
-            QListWidget::item:selected {
-                background-color: #3498db;
-                color: white;
-            }
-        """)
         main_layout.addWidget(self.diary_list)
         
         # Eintrags-Navigation als Baum
         entry_label = QLabel("Einträge:" if lang == "Deutsch" else "Entries:")
-        entry_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #34495e; background-color: transparent;")
+        entry_label.setFont(label_font)
         main_layout.addWidget(entry_label)
         
         self.entry_tree = QTreeWidget()
         self.entry_tree.setHeaderLabels(["Datum", "Jahr", "Monat"])
         self.entry_tree.itemDoubleClicked.connect(self.on_entry_double_clicked)
-        self.entry_tree.setStyleSheet("""
-            QTreeWidget {
-                background-color: #ffffff;
-                border: 2px solid #2ecc71;
-                border-radius: 8px;
-                padding: 10px;
-                font-size: 13px;
-            }
-            QTreeWidget::item {
-                padding: 8px;
-            }
-            QTreeWidget::item:hover {
-                background-color: #d5f4e6;
-            }
-            QTreeWidget::item:selected {
-                background-color: #2ecc71;
-                color: white;
-            }
-        """)
         main_layout.addWidget(self.entry_tree)
         
         central_widget.setLayout(main_layout)
