@@ -9,7 +9,7 @@ wget -O ~/.local/bin/tagesgans/editor.py https://raw.githubusercontent.com/Chang
 wget -O ~/.local/share/icons/Goose/tagesgans.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/icon.png
 wget -O ~/.local/share/icons/Goose/time.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/Time.png
 wget -O ~/.local/share/icons/Goose/label.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/Label.png
-wget -O ~/.local/share/applications/tagesgans.desktop https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/Tagesgans.desktop
+wget -O ~/.local/share/applications/tagesgans.desktop https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/tagesgans.desktop
 
 chmod +x ~/.local/bin/tagesgans/reader.py
 chmod +x ~/.local/bin/tagesgans/editor.py
