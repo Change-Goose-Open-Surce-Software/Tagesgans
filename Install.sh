@@ -6,7 +6,9 @@ mkdir -p ~/.local/share/icons/Goose
 wget -O ~/.local/bin/tagesgans/reader.py https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/reader.py
 wget -O ~/.local/bin/tagesgans/tagesgans.py https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/tagesgans.py
 wget -O ~/.local/bin/tagesgans/editor.py https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/editor.py
-wget -O ~/.local/bin/tagesgans/tagesgans.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/icon.py
+wget -O ~/.local/share/icons/Goose/tagesgans.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/icon.py
+wget -O ~/.local/share/icons/Goose/time.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/Time.png
+wget -O ~/.local/share/icons/Goose/label.png https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/main/Label.png
 
 chmod +x ~/.local/bin/reader.py
 chmod +x ~/.local/bin/editor.py
