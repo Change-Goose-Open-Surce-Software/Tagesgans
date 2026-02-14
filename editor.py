@@ -3,7 +3,7 @@
 """
 Tagesgans Editor - DuckDiary
 Creates and edits diary entries
-Version: 0.0.1
+Version: 0.0.2
 """
 
 import sys
@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QH
                              QPushButton, QLabel, QTextEdit, QToolBar, QAction, QFileDialog,
                              QColorDialog, QSpinBox, QComboBox, QDialog, QFormLayout,
                              QDialogButtonBox, QListWidget, QListWidgetItem, QMessageBox,
-                             QCalendarWidget, QLineEdit, QInputDialog)
+                             QCalendarWidget, QLineEdit, QInputDialog, QPlainTextEdit)
 from PyQt5.QtCore import Qt, QUrl, QDate, QMimeData
 from PyQt5.QtGui import QFont, QColor, QTextCharFormat, QIcon, QTextCursor
 
@@ -60,6 +60,7 @@ class CreateDiaryDialog(QDialog):
     def __init__(self, parent=None, language="Deutsch"):
         super().__init__(parent)
         self.language = language
+        self.icon_path = None
         self.init_ui()
     
     def init_ui(self):
@@ -80,6 +81,16 @@ class CreateDiaryDialog(QDialog):
         
         layout.addRow("Speicherort:" if self.language == "Deutsch" else "Location:", path_layout)
         
+        # Icon-Auswahl
+        icon_layout = QHBoxLayout()
+        self.icon_label = QLabel("Kein Icon" if self.language == "Deutsch" else "No Icon")
+        icon_browse_btn = QPushButton("Icon wählen..." if self.language == "Deutsch" else "Choose Icon...")
+        icon_browse_btn.clicked.connect(self.browse_icon)
+        icon_layout.addWidget(self.icon_label)
+        icon_layout.addWidget(icon_browse_btn)
+        
+        layout.addRow("Icon:" if self.language == "English" else "Icon:", icon_layout)
+        
         button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
@@ -96,11 +107,24 @@ class CreateDiaryDialog(QDialog):
         if path:
             self.path_edit.setText(path)
     
+    def browse_icon(self):
+        """Icon auswählen"""
+        icon_file, _ = QFileDialog.getOpenFileName(
+            self, 
+            "Icon auswählen" if self.language == "Deutsch" else "Choose Icon",
+            str(Path.home()),
+            "Bilder (*.png *.jpg *.jpeg *.svg)"
+        )
+        if icon_file:
+            self.icon_path = icon_file
+            self.icon_label.setText(Path(icon_file).name)
+    
     def get_diary_info(self):
         """Gibt Tagebuch-Informationen zurück"""
         return {
             "name": self.name_edit.text(),
-            "path": Path(self.path_edit.text())
+            "path": Path(self.path_edit.text()),
+            "icon": self.icon_path
         }
 
 
@@ -111,10 +135,15 @@ class DiaryEditor(QMainWindow):
         super().__init__()
         self.config_file = Path(config_file)
         self.settings = self.load_settings()
-        self.mode = mode  # "edit" oder "create"
+        self.mode = mode
         self.current_diary = None
         self.current_entry = None
         self.current_date = None
+        
+        # Für Markup-Tracking
+        self.vcards = {}
+        self.kmls = {}
+        self.media_files = []
         
         self.init_ui()
         
@@ -175,11 +204,16 @@ class DiaryEditor(QMainWindow):
             self.entry_list.itemClicked.connect(self.on_entry_selected)
             main_layout.addWidget(self.entry_list)
         
-        # Text-Editor
-        self.text_edit = QTextEdit()
+        # Text-Editor - PLAINTEXT für Markup!
+        self.text_edit = QPlainTextEdit()
         self.text_edit.setAcceptDrops(True)
         self.text_edit.dragEnterEvent = self.drag_enter_event
         self.text_edit.dropEvent = self.drop_event
+        
+        # Monospace Font für Markup
+        font = QFont("Monospace", 12)
+        self.text_edit.setFont(font)
+        
         main_layout.addWidget(self.text_edit)
         
         # Speichern Button
@@ -205,56 +239,13 @@ class DiaryEditor(QMainWindow):
             self.addToolBar(Qt.BottomToolBarArea, toolbar)
         elif pos == "Links":
             self.addToolBar(Qt.LeftToolBarArea, toolbar)
-        else:  # Rechts
+        else:
             self.addToolBar(Qt.RightToolBarArea, toolbar)
         
-        # Schriftgröße
-        toolbar.addWidget(QLabel("Größe:"))
-        self.size_spin = QSpinBox()
-        self.size_spin.setMinimum(8)
-        self.size_spin.setMaximum(72)
-        self.size_spin.setValue(20)
-        self.size_spin.valueChanged.connect(self.apply_formatting)
-        toolbar.addWidget(self.size_spin)
-        
-        # Fett
-        self.bold_action = QAction("B", self)
-        self.bold_action.setCheckable(True)
-        self.bold_action.triggered.connect(self.apply_formatting)
-        font = self.bold_action.font()
-        font.setBold(True)
-        self.bold_action.setFont(font)
-        toolbar.addAction(self.bold_action)
-        
-        # Kursiv
-        self.italic_action = QAction("I", self)
-        self.italic_action.setCheckable(True)
-        self.italic_action.triggered.connect(self.apply_formatting)
-        font = self.italic_action.font()
-        font.setItalic(True)
-        self.italic_action.setFont(font)
-        toolbar.addAction(self.italic_action)
-        
-        # Unterstrichen
-        self.underline_action = QAction("U", self)
-        self.underline_action.setCheckable(True)
-        self.underline_action.triggered.connect(self.apply_formatting)
-        font = self.underline_action.font()
-        font.setUnderline(True)
-        self.underline_action.setFont(font)
-        toolbar.addAction(self.underline_action)
-        
-        # Durchgestrichen
-        self.strike_action = QAction("S", self)
-        self.strike_action.setCheckable(True)
-        self.strike_action.triggered.connect(self.apply_formatting)
-        toolbar.addAction(self.strike_action)
-        
-        # Farbe
-        self.color_btn = QPushButton("Farbe")
-        self.color_btn.clicked.connect(self.choose_color)
-        self.current_color = QColor("black")
-        toolbar.addWidget(self.color_btn)
+        # Format einfügen
+        format_btn = QPushButton("Format")
+        format_btn.clicked.connect(self.insert_format)
+        toolbar.addWidget(format_btn)
         
         toolbar.addSeparator()
         
@@ -283,59 +274,84 @@ class DiaryEditor(QMainWindow):
         media_btn.clicked.connect(self.insert_media)
         toolbar.addWidget(media_btn)
     
-    def apply_formatting(self):
-        """Wendet Formatierung auf markierten Text an"""
-        cursor = self.text_edit.textCursor()
-        if not cursor.hasSelection():
-            return
+    def insert_format(self):
+        """Fügt Format-Tag ein"""
+        # Dialog für Format-Einstellungen
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Format einfügen")
+        layout = QFormLayout()
         
-        fmt = QTextCharFormat()
+        size_spin = QSpinBox()
+        size_spin.setMinimum(8)
+        size_spin.setMaximum(72)
+        size_spin.setValue(20)
+        layout.addRow("Größe:", size_spin)
         
-        # Schriftgröße
-        font = QFont()
-        font.setPointSize(self.size_spin.value())
-        font.setBold(self.bold_action.isChecked())
-        font.setItalic(self.italic_action.isChecked())
-        font.setUnderline(self.underline_action.isChecked())
-        font.setStrikeOut(self.strike_action.isChecked())
-        fmt.setFont(font)
+        # FKUD Checkboxen
+        bold_check = QDialog()
+        bold_widget = QWidget()
+        bold_layout = QHBoxLayout()
+        
+        from PyQt5.QtWidgets import QCheckBox
+        fett_check = QCheckBox("Fett (F)")
+        kursiv_check = QCheckBox("Kursiv (K)")
+        unterstrichen_check = QCheckBox("Unterstrichen (U)")
+        durchgestrichen_check = QCheckBox("Durchgestrichen (D)")
+        
+        style_layout = QVBoxLayout()
+        style_layout.addWidget(fett_check)
+        style_layout.addWidget(kursiv_check)
+        style_layout.addWidget(unterstrichen_check)
+        style_layout.addWidget(durchgestrichen_check)
+        layout.addRow("Stil:", style_layout)
         
         # Farbe
-        fmt.setForeground(self.current_color)
+        colors = ["Schwarz", "Rot", "Grün", "Blau", "Gelb", "Orange", "Lila", "Grau"]
+        color_combo = QComboBox()
+        color_combo.addItems(colors)
+        layout.addRow("Farbe:", color_combo)
         
-        cursor.mergeCharFormat(fmt)
-    
-    def choose_color(self):
-        """Farbauswahl"""
-        color = QColorDialog.getColor(self.current_color, self)
-        if color.isValid():
-            self.current_color = color
-            self.apply_formatting()
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(dialog.accept)
+        button_box.rejected.connect(dialog.reject)
+        
+        main_layout = QVBoxLayout()
+        main_layout.addLayout(layout)
+        main_layout.addWidget(button_box)
+        dialog.setLayout(main_layout)
+        
+        if dialog.exec_() == QDialog.Accepted:
+            size = size_spin.value()
+            style = ""
+            style += "F" if fett_check.isChecked() else "f"
+            style += "K" if kursiv_check.isChecked() else "k"
+            style += "U" if unterstrichen_check.isChecked() else "u"
+            style += "D" if durchgestrichen_check.isChecked() else "d"
+            color = color_combo.currentText()
+            
+            format_tag = f"{{{size}|{style}|{color}}}"
+            self.text_edit.insertPlainText(format_tag)
     
     def insert_person(self):
         """Fügt @Person ein"""
         name, ok = QInputDialog.getText(self, "Person", "Name:")
         if ok and name:
-            # vCard-Datei auswählen
-            vcard_file, _ = QFileDialog.getOpenFileName(self, "vCard auswählen", str(Path.home()), "vCard (*.vcard *.vcf)")
+            vcard_file, _ = QFileDialog.getOpenFileName(
+                self, "vCard auswählen", str(Path.home()), "vCard (*.vcard *.vcf)"
+            )
             if vcard_file:
                 self.text_edit.insertPlainText(f"@{name}")
-                # vCard für später merken (wird beim Speichern kopiert)
-                if not hasattr(self, 'vcards'):
-                    self.vcards = {}
                 self.vcards[name] = vcard_file
     
     def insert_place(self):
         """Fügt %Ort ein"""
         name, ok = QInputDialog.getText(self, "Ort", "Ortsname:")
         if ok and name:
-            # KML-Datei auswählen
-            kml_file, _ = QFileDialog.getOpenFileName(self, "KML auswählen", str(Path.home()), "KML (*.kml)")
+            kml_file, _ = QFileDialog.getOpenFileName(
+                self, "KML auswählen", str(Path.home()), "KML (*.kml)"
+            )
             if kml_file:
                 self.text_edit.insertPlainText(f"%{name}")
-                # KML für später merken
-                if not hasattr(self, 'kmls'):
-                    self.kmls = {}
                 self.kmls[name] = kml_file
     
     def insert_copy(self):
@@ -349,8 +365,9 @@ class DiaryEditor(QMainWindow):
         dialog = DatePickerDialog(self, self.settings["language"])
         if dialog.exec_() == QDialog.Accepted:
             date = dialog.get_date()
-            # Zeit hinzufügen
-            time, ok = QInputDialog.getText(self, "Uhrzeit", "Uhrzeit (HH:MM):", text="12:00")
+            time, ok = QInputDialog.getText(
+                self, "Uhrzeit", "Uhrzeit (HH:MM):", text="12:00"
+            )
             if ok:
                 try:
                     hour, minute = map(int, time.split(':'))
@@ -377,10 +394,6 @@ class DiaryEditor(QMainWindow):
         for file in files:
             filename = Path(file).name
             self.text_edit.insertPlainText(f"<{filename}>")
-            
-            # Datei für später merken
-            if not hasattr(self, 'media_files'):
-                self.media_files = []
             self.media_files.append(file)
     
     def drag_enter_event(self, event):
@@ -399,9 +412,6 @@ class DiaryEditor(QMainWindow):
             if file_path.suffix.lower() in ['.png', '.jpg', '.jpeg', '.svg', '.mp3', '.ogg', '.opus', '.mp4']:
                 filename = file_path.name
                 self.text_edit.insertPlainText(f"<{filename}>")
-                
-                if not hasattr(self, 'media_files'):
-                    self.media_files = []
                 self.media_files.append(str(file_path))
     
     def scan_diaries(self):
@@ -452,7 +462,6 @@ class DiaryEditor(QMainWindow):
         with open(day_file, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Rohen Text anzeigen (könnte auch formatiert geparst werden)
         self.text_edit.setPlainText(content)
     
     def new_entry(self):
@@ -468,7 +477,7 @@ class DiaryEditor(QMainWindow):
             
             # Standardformatierung einfügen
             default_format = self.settings.get("default_format", "{20|fkud|Schwarz}")
-            self.text_edit.setPlainText(default_format)
+            self.text_edit.setPlainText(default_format + "\n")
     
     def create_new_diary(self):
         """Erstellt ein neues Tagebuch"""
@@ -491,7 +500,6 @@ class DiaryEditor(QMainWindow):
                 info_file = diary_path / "Info.txt"
                 urllib.request.urlretrieve(info_url, info_file)
             except:
-                # Fallback: eigene Info.txt
                 with open(diary_path / "Info.txt", 'w') as f:
                     f.write("This is a Tagesgans diary.\n")
             
@@ -500,14 +508,18 @@ class DiaryEditor(QMainWindow):
                 install_url = "https://raw.githubusercontent.com/Change-Goose-Open-Surce-Software/Tagesgans/refs/heads/main/Install.sh"
                 install_file = diary_path / "Install.sh"
                 urllib.request.urlretrieve(install_url, install_file)
-                install_file.chmod(0o755)  # Ausführbar machen
+                install_file.chmod(0o755)
             except:
                 pass
             
-            # Icon kopieren (wenn vorhanden)
-            icon_src = Path.home() / ".local" / "share" / "icons" / "Goose" / "tagesgans.png"
-            if icon_src.exists():
-                shutil.copy(icon_src, diary_path / "Icon.png")
+            # Icon kopieren
+            if info["icon"]:
+                shutil.copy(info["icon"], diary_path / "Icon.png")
+            else:
+                # Standard-Icon verwenden
+                icon_src = Path.home() / ".local" / "share" / "icons" / "Goose" / "tagesgans.png"
+                if icon_src.exists():
+                    shutil.copy(icon_src, diary_path / "Icon.png")
             
             self.current_diary = diary_path
             
@@ -524,15 +536,12 @@ class DiaryEditor(QMainWindow):
         
         # Datum bestimmen
         if self.current_entry:
-            # Bestehenden Eintrag bearbeiten
             entry_dir = self.current_entry.parent
         else:
-            # Neuer Eintrag
             if not self.current_date:
                 QMessageBox.warning(self, "Fehler", "Kein Datum ausgewählt!")
                 return
             
-            # Ordnerstruktur erstellen
             year_dir = self.current_diary / str(self.current_date.year)
             month_dir = year_dir / self.current_date.strftime("%B")
             day_dir = month_dir / f"{self.current_date.day:02d}"
@@ -547,26 +556,22 @@ class DiaryEditor(QMainWindow):
             f.write(content)
         
         # vCards kopieren
-        if hasattr(self, 'vcards'):
-            for name, vcard_file in self.vcards.items():
-                shutil.copy(vcard_file, entry_dir / f"{name}.vcard")
-            self.vcards = {}
+        for name, vcard_file in self.vcards.items():
+            shutil.copy(vcard_file, entry_dir / f"{name}.vcard")
+        self.vcards = {}
         
         # KMLs kopieren
-        if hasattr(self, 'kmls'):
-            for name, kml_file in self.kmls.items():
-                shutil.copy(kml_file, entry_dir / f"{name}.kml")
-            self.kmls = {}
+        for name, kml_file in self.kmls.items():
+            shutil.copy(kml_file, entry_dir / f"{name}.kml")
+        self.kmls = {}
         
         # Medien kopieren
-        if hasattr(self, 'media_files'):
-            for media_file in self.media_files:
-                shutil.copy(media_file, entry_dir / Path(media_file).name)
-            self.media_files = []
+        for media_file in self.media_files:
+            shutil.copy(media_file, entry_dir / Path(media_file).name)
+        self.media_files = []
         
         QMessageBox.information(self, "Gespeichert", "Eintrag wurde gespeichert!")
         
-        # Liste aktualisieren
         if self.mode == "edit":
             self.load_entries()
 
