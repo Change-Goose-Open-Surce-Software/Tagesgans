@@ -106,7 +106,6 @@ class DiaryEditor(QMainWindow):
         return {"language": "Deutsch", "default_format": "{20|fkud|#000000}"}
 
     def init_ui(self):
-        lang = self.settings.get("language", "Deutsch")
         self.setWindowTitle("Tagesgans Editor")
         self.setMinimumSize(800, 600)
         
@@ -157,6 +156,7 @@ class DiaryEditor(QMainWindow):
         layout.addRow("Größe:", size_spin)
         
         style_layout = QVBoxLayout()
+        from PyQt5.QtWidgets import QCheckBox
         fett = QCheckBox("Fett (F)")
         kursiv = QCheckBox("Kursiv (K)")
         unter = QCheckBox("Unterstrichen (U)")
@@ -170,7 +170,8 @@ class DiaryEditor(QMainWindow):
             c = QColorDialog.getColor()
             if c.isValid():
                 self.selected_color = c.name()
-                color_btn.setStyleSheet(f"background-color: {self.selected_color};")
+                color_btn.setStyleSheet(f"background-color: {self.selected_color}; color: {'white' if c.lightness() < 128 else 'black'}")
+                color_btn.setText(f"Farbe: {self.selected_color}")
         color_btn.clicked.connect(choose)
         layout.addRow("Farbe:", color_btn)
         
@@ -181,27 +182,41 @@ class DiaryEditor(QMainWindow):
         dialog.setLayout(layout)
         
         if dialog.exec_() == QDialog.Accepted:
-            s = "".join(["F" if fett.isChecked() else "f", "K" if kursiv.isChecked() else "k",
-                         "U" if unter.isChecked() else "u", "D" if durch.isChecked() else "d"])
+            s = "".join([
+                "F" if fett.isChecked() else "f",
+                "K" if kursiv.isChecked() else "k",
+                "U" if unter.isChecked() else "u",
+                "D" if durch.isChecked() else "d"
+            ])
             self.text_edit.insertPlainText(f"{{{size_spin.value()}|{s}|{self.selected_color}}}")
 
     def insert_media(self):
         file_path, _ = QFileDialog.getOpenFileName(self, "Medien wählen")
         if file_path:
             self.media_files.append(file_path)
-            self.text_edit.insertPlainText(f"[[{Path(file_path).name}]]")
+            self.text_edit.insertPlainText(f"<{Path(file_path).name}>")
 
     def save_entry(self):
         if not self.current_diary: return
-        day_dir = self.current_diary / str(self.current_date.year) / self.current_date.strftime("%B") / f"{self.current_date.day:02d}"
+        # Datumspfad erstellen
+        year = str(self.current_date.year)
+        month = self.current_date.strftime("%B")
+        day = f"{self.current_date.day:02d}"
+        
+        day_dir = self.current_diary / year / month / day
         day_dir.mkdir(parents=True, exist_ok=True)
+        
         with open(day_dir / "Day.txt", 'w', encoding='utf-8') as f:
             f.write(self.text_edit.toPlainText())
-        for m in self.media_files: shutil.copy(m, day_dir / Path(m).name)
-        QMessageBox.information(self, "Erfolg", "Gespeichert!")
+        
+        for m in self.media_files:
+            shutil.copy(m, day_dir / Path(m).name)
+        
+        QMessageBox.information(self, "Erfolg", "Eintrag wurde gespeichert!")
 
     def scan_diaries(self):
         self.diary_combo.clear()
+        # Sucht im Standardpfad nach .duckday Ordnern
         base_path = Path.home() / "Documents" / "Tagebücher"
         if base_path.exists():
             for d in base_path.glob("*.duckday"):
@@ -209,23 +224,20 @@ class DiaryEditor(QMainWindow):
 
     def on_diary_selected(self, index):
         self.current_diary = self.diary_combo.itemData(index)
-        self.load_entries()
 
-    def load_entries(self):
-        self.entry_list.clear()
-        # Hier würde die Logik zum Auflisten der Tage folgen...
+    def on_entry_selected(self, item):
+        pass # Hier könnte man später alte Einträge laden
 
     def create_new_diary(self):
-        dialog = CreateDiaryDialog(self)
-        if dialog.exec_() == QDialog.Accepted:
-            info = dialog.get_diary_info()
-            path = info["path"] / f"{info['name']}.duckday"
-            path.mkdir(parents=True, exist_ok=True)
-            self.scan_diaries()
+        # Logik für neues Tagebuch
+        pass
 
 def main():
     app = QApplication(sys.argv)
-    editor = DiaryEditor(sys.argv[1] if len(sys.argv) > 1 else "config.json")
+    # Erwartet config_file als Argument oder nutzt Standard
+    config = sys.argv[1] if len(sys.argv) > 1 else "config.json"
+    mode = sys.argv[2] if len(sys.argv) > 2 else "edit"
+    editor = DiaryEditor(config, mode)
     editor.show()
     sys.exit(app.exec_())
 
