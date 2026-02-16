@@ -41,7 +41,6 @@ class DatePickerDialog(QDialog):
         self.calendar.setSelectedDate(QDate.currentDate())
         
         # Einfachere Navigation: Klick auf Jahr/Monat
-        from PyQt5.QtWidgets import QCalendarWidget
         self.calendar.setNavigationBarVisible(True)
         # Erlaube direktes Springen zu Jahr/Monat
         self.calendar.setVerticalHeaderFormat(QCalendarWidget.NoVerticalHeader)
